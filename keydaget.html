@@ -109,7 +109,7 @@
     <div class="subtitle">Bạn đã vượt link thành công! Nhấn nút bên dưới để hệ thống cấp Key đăng nhập cho bạn.</div>
     
     <div class="info-box">
-      <p>Loại Key: <span>VIP 24 GIỜ</span></p>
+      <p>Loại Key: <span>VIP 3 GIỜ</span></p>
       <p>Giới hạn: <span>1 THIẾT BỊ</span></p>
     </div>
 
@@ -123,7 +123,7 @@
     </div>
 
     <div class="result-wrapper" id="resultWrapper">
-      <div class="key-display" id="keyDisplay">FAROS-1D-XXXXXXXXX</div>
+      <div class="key-display" id="keyDisplay">FAROS-XX-XXXX</div>
       <button class="btn-copy" id="btnCopy">📋 SAO CHÉP KEY</button>
       <div style="margin-top:15px; font-size:0.8rem; color:#888;">Hãy copy Key và quay lại trang đăng nhập nhé!</div>
     </div>
@@ -195,9 +195,9 @@
       }, 50);
     });
 
-    // 5. ĐẨY KEY LÊN FIREBASE DATABASE VỚI HẠN SỬ DỤNG LÀ 2 TIẾNG
+    // 5. ĐẨY KEY LÊN FIREBASE DATABASE VỚI HẠN SỬ DỤNG LÀ 3 TIẾNG
     function pushKeyToFirebase() {
-      // Đổi định dạng hiển thị thành FAROS-2H-XXXXXXXXX cho hợp lý
+      // Đổi định dạng hiển thị thành FAROS-3H-XXXXXXXXX cho hợp lý
       const newKey = "FAROS-3H-" + generateRandomString(9);
       
       const keyRef = db.ref('Keys_farosWvdann_secure_x367_369_36_67/' + newKey);
@@ -206,7 +206,7 @@
         code: newKey,
         durationHours: 3, // Ghi chú thời lượng 2 giờ
         limit: 1,        
-        // CÔNG THỨC: 2 tiếng * 60 phút * 60 giây * 1000 mili-giây
+        // CÔNG THỨC: 3 tiếng * 60 phút * 60 giây * 1000 mili-giây
         expire: Date.now() + (3 * 60 * 60 * 1000), 
         devices: {}, 
         createdAt: Date.now()
