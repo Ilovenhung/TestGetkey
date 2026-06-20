@@ -360,16 +360,26 @@ document.getElementById('btnCancelGetKey').addEventListener('click', () => {
 // Xử lý chuyển hướng rút gọn link kiếm tiền thông minh
 document.getElementById('btnConfirmGetKey').addEventListener('click', () => {
   getKeyModal.classList.remove('active');
-  let encodedUrl = encodeURIComponent(window.location.href);
+  
+  // 1. Tự động lấy link hiện tại và chuyển hướng sang file keydaget.html kèm theo mã khóa bí mật (?pass=true)
+  let currentPath = window.location.href.split('?')[0]; // Xóa các tham số cũ nếu có
+  let destinationUrl = currentPath.replace('index.html', 'keydaget.html');
+  
+  // Đảm bảo link đích phải là trang keydaget
+  if (!destinationUrl.includes('keydaget.html')) {
+     destinationUrl += 'keydaget.html';
+  }
+  
+  // Thêm chìa khóa ?pass=true để trang keydaget.html biết là đã vượt link thành công
+  destinationUrl += '?pass=true';
+  
+  let encodedUrl = encodeURIComponent(destinationUrl);
+  
+  // 2. Chuyển hướng sang TapLayMa với Token API của bạn
   let tapLayMaLink = `https://api.taplayma.com/st?token=28afb061-cd33-4178-98e5-161f3f88e996&url=${encodedUrl}`;
   window.open(tapLayMaLink, '_blank');
 });
 
-// Bấm ra ngoài vùng hộp thoại để ẩn nhanh
-window.addEventListener('click', (e) => {
-  if (e.target === customPromptModal) customPromptModal.classList.remove('active');
-  if (e.target === getKeyModal) getKeyModal.classList.remove('active');
-});
 
     // Hiệu ứng bụi nền mượt mà
     const dCanvas = document.getElementById('dustCanvas'); const dCtx = dCanvas.getContext('2d'); let particles = [];
