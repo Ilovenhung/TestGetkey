@@ -530,7 +530,7 @@
             }
         }
 
-        // --- 8. CẬP NHẬT THÔNG SỐ CPU/RAM/PING THỰC TẾ ---
+                // --- 8. CẬP NHẬT THÔNG SỐ CPU/RAM/PING THỰC TẾ ---
         let lastLoop = Date.now();
         
         function updateStats() {
@@ -546,41 +546,29 @@
                 }
             };
 
-            // A. ĐO CPU THỰC TẾ (Dựa trên độ trễ xử lý của trình duyệt - Chặn Event Loop)
+            // A. ĐO CPU THỰC TẾ (Dựa trên độ trễ xử lý của trình duyệt)
             let thisLoop = Date.now();
-            let delay = thisLoop - lastLoop - 2000; // 2000ms là khoảng thời gian setInterval
+            let delay = thisLoop - lastLoop - 2000; 
             lastLoop = thisLoop;
-            // Tính toán mức độ quá tải, máy càng lag % CPU giả lập sẽ càng cao (tối thiểu 12%)
             let cpuUsage = Math.min(99, Math.max(12, Math.floor(12 + (delay > 0 ? delay / 5 : 0) + Math.random() * 5)));
             setVal('cpu', cpuUsage, '#ff3333');
 
-            // B. ĐO RAM THỰC TẾ (Lấy dung lượng RAM thực tế mà Tab Web này đang chiếm dụng)
-            let ramUsage = Math.floor(45 + Math.random() * 8); // Giá trị mặc định nếu trình duyệt chặn
-            if (performance && performance.memory) {
-                // Tính tỷ lệ bộ nhớ đã dùng trên tổng bộ nhớ giới hạn của trình duyệt
-                let usedMem = performance.memory.usedJSHeapSize;
-                let totalMem = performance.memory.jsHeapLimit;
-                ramUsage = Math.floor((usedMem / totalMem) * 100) + 30; // Cộng thêm base hệ thống để nhìn cho thật
-                if (ramUsage > 95) ramUsage = 92;
-            }
+            // B. ĐO RAM (Chạy ngẫu nhiên từ 20% đến 65% theo yêu cầu)
+            let ramUsage = Math.floor(Math.random() * (65 - 20 + 1)) + 20;
             setVal('ram', ramUsage, '#ffaa00');
 
-            // C. ĐO MẠNG THỰC TẾ (Đo PING phản hồi thực tế đến Server Firebase của bạn bằng ms)
+            // C. ĐO MẠNG THỰC TẾ (Đo PING phản hồi thực tế đến Server bằng ms)
             let startTime = Date.now();
-            // Gửi một truy vấn siêu nhỏ lên server để tính thời gian phản hồi
             db.ref('.info/connected').once('value').then(() => {
                 let ping = Date.now() - startTime;
-                // Nếu ping quá thấp (mạng cực mạnh), giữ mức ổn định từ 20ms - 40ms cho game thủ nhìn vừa mắt
                 if (ping < 15) ping = Math.floor(20 + Math.random() * 10); 
                 
-                // Đổi màu vòng tròn mạng dựa trên độ lag của Ping
-                let netColor = '#00ff41'; // Xanh lá (Mạng mượt)
-                if (ping > 100) netColor = '#ffaa00'; // Vàng (Hơi lag)
-                if (ping > 250) netColor = '#ff3333'; // Đỏ (Rất lag)
+                let netColor = '#00ff41'; 
+                if (ping > 100) netColor = '#ffaa00'; 
+                if (ping > 250) netColor = '#ff3333'; 
                 
                 setVal('network', ping, netColor, 'ms');
             }).catch(() => {
-                // Nếu mất mạng hoặc lỗi, hiển thị 999ms
                 setVal('network', 999, '#ff3333', 'ms');
             });
         }
