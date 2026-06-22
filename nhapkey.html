@@ -232,8 +232,8 @@
       const token = Array.from(tokenArr).map(b => b.toString(16).padStart(2,'0')).join('');
       const expireTime = Date.now() + (5 * 60 * 1000); 
 
-      sessionStorage.setItem('faros_auth_token', token);
-      sessionStorage.setItem('faros_token_expire', expireTime);
+      localStorage.setItem('faros_auth_token', token);
+      localStorage.setItem('faros_token_expire', expireTime);
 
       getKeyModal.classList.remove('active');
       
