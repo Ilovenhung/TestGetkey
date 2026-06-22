@@ -153,22 +153,22 @@
       const now = Date.now();
 
       if (urlToken) {
-        const savedToken = sessionStorage.getItem('faros_auth_token');
-        const tokenExpire = parseInt(sessionStorage.getItem('faros_token_expire') || '0');
+        const savedToken = localStorage.getItem('faros_auth_token');
+        const tokenExpire = parseInt(localStorage.getItem('faros_token_expire') || '0');
 
         if (urlToken === savedToken && now < tokenExpire) {
-          sessionStorage.setItem('faros_link_authorized', 'true');
-          sessionStorage.removeItem('faros_generated_key');
+          localStorage.setItem('faros_link_authorized', 'true');
+          localStorage.removeItem('faros_generated_key');
           // CÀI ĐẶT THỜI GIAN CHẾT: ĐÚNG 2 PHÚT KỂ TỪ LÚC CLICK CHUYỂN HƯỚNG
-          sessionStorage.setItem('faros_destroy_timestamp', now + (2 * 60 * 1000));
+          localStorage.setItem('faros_destroy_timestamp', now + (2 * 60 * 1000));
           window.history.replaceState({}, document.title, window.location.pathname);
         } else {
           showPanel('error'); return;
         }
       }
 
-      const isAuthorized = sessionStorage.getItem('faros_link_authorized') === 'true';
-      const destroyTimestamp = parseInt(sessionStorage.getItem('faros_destroy_timestamp') || '0');
+      const isAuthorized = localStorage.getItem('faros_link_authorized') === 'true';
+      const destroyTimestamp = parseInt(localStorage.getItem('faros_destroy_timestamp') || '0');
 
       if (!isAuthorized || !destroyTimestamp) { showPanel('error'); return; }
       if (now >= destroyTimestamp) { handleLinkExpired(); return; }
@@ -205,12 +205,12 @@
           return;
         }
 
-        const destroyTimestamp = parseInt(sessionStorage.getItem('faros_destroy_timestamp') || '0');
+        const destroyTimestamp = parseInt(localStorage.getItem('faros_destroy_timestamp') || '0');
         showPanel('success');
         startGlobalDestructionTimer(destroyTimestamp);
         updateRemainingText(count);
 
-        const savedKey = sessionStorage.getItem('faros_generated_key');
+        const savedKey = localStorage.getItem('faros_generated_key');
         if (savedKey) {
           document.getElementById('btnGenerate').style.display = 'none';
           document.getElementById('resultWrapper').style.display = 'block';
@@ -218,7 +218,7 @@
           toggleGetAnotherButton(count);
         }
       }).catch(() => {
-        const destroyTimestamp = parseInt(sessionStorage.getItem('faros_destroy_timestamp') || '0');
+        const destroyTimestamp = parseInt(localStorage.getItem('faros_destroy_timestamp') || '0');
         showPanel('success');
         startGlobalDestructionTimer(destroyTimestamp);
       });
@@ -268,9 +268,9 @@
     }
 
     function handleLinkExpired() {
-      sessionStorage.removeItem('faros_link_authorized');
-      sessionStorage.removeItem('faros_destroy_timestamp');
-      sessionStorage.removeItem('faros_generated_key');
+      localStorage.removeItem('faros_link_authorized');
+      localStorage.removeItem('faros_destroy_timestamp');
+      localStorage.removeItem('faros_generated_key');
       if (destructionInterval) clearInterval(destructionInterval);
       showPanel('none');
       document.getElementById('expiredMessage').style.display = 'block';
@@ -381,7 +381,7 @@
                   });
                 })
                 .then(() => {
-                  sessionStorage.setItem('faros_generated_key', key);
+                  localStorage.setItem('faros_generated_key', key);
                   document.getElementById('progressWrapper').style.display = 'none';
                   document.getElementById('resultWrapper').style.display = 'block';
                   document.getElementById('keyDisplay').innerText = key;
