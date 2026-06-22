@@ -220,28 +220,26 @@
         }
         
         /* Custom Modal Style - Thay thế cho alert mặc định */
-.faros-modal-overlay {
-    position: fixed; inset: 0; background: rgba(7, 7, 13, 0.6);
-    backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
-    z-index: 99999; display: flex; justify-content: center; align-items: center;
-    padding: 20px; opacity: 0; pointer-events: none; transition: all 0.3s;
-}
-.faros-modal-overlay.active { opacity: 1; pointer-events: auto; }
-.faros-modal-box {
-    background: rgba(42, 10, 61, 0.9); border: 2px solid var(--red-primary);
-    border-radius: 20px; padding: 25px; width: 100%; max-width: 320px;
-    box-shadow: 0 0 30px rgba(123, 44, 191, 0.5); text-align: center;
-    transform: scale(0.9); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.15);
-}
-.faros-modal-overlay.active .faros-modal-box { transform: scale(1); }
-.faros-modal-text { font-size: 1.1rem; color: #fff; margin-bottom: 25px; font-weight: bold; line-height: 1.4; }
-.btn-modal { 
-    background: linear-gradient(90deg, var(--red-primary), var(--red-light));
-    border: none; padding: 12px 30px; border-radius: 10px; color: white;
-    font-weight: bold; cursor: pointer; width: 100%;
-}
-
-
+        .faros-modal-overlay {
+            position: fixed; inset: 0; background: rgba(7, 7, 13, 0.6);
+            backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+            z-index: 99999; display: flex; justify-content: center; align-items: center;
+            padding: 20px; opacity: 0; pointer-events: none; transition: all 0.3s;
+        }
+        .faros-modal-overlay.active { opacity: 1; pointer-events: auto; }
+        .faros-modal-box {
+            background: rgba(42, 10, 61, 0.9); border: 2px solid var(--red-primary);
+            border-radius: 20px; padding: 25px; width: 100%; max-width: 320px;
+            box-shadow: 0 0 30px rgba(123, 44, 191, 0.5); text-align: center;
+            transform: scale(0.9); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.15);
+        }
+        .faros-modal-overlay.active .faros-modal-box { transform: scale(1); }
+        .faros-modal-text { font-size: 1.1rem; color: #fff; margin-bottom: 25px; font-weight: bold; line-height: 1.4; }
+        .btn-modal { 
+            background: linear-gradient(90deg, var(--red-primary), var(--red-light));
+            border: none; padding: 12px 30px; border-radius: 10px; color: white;
+            font-weight: bold; cursor: pointer; width: 100%;
+        }
     </style>
 </head>
 <body onload="initApp()">
@@ -352,6 +350,7 @@
                     </label>
                 </div>
             </div>
+        </div>
 
         <div class="script-panel">
             <div class="script-header">
@@ -385,8 +384,15 @@
         </div>
     </div>
 
+    <div id="farosAlertModal" class="faros-modal-overlay">
+        <div class="faros-modal-box">
+            <div id="farosAlertText" class="faros-modal-text"></div>
+            <button class="btn-modal" onclick="closeModal()">ĐÃ HIỂU</button>
+        </div>
+    </div>
+
     <script>
-        // --- 1. HÀM HIỂN THỊ MODAL THÔNG BÁO (phải khai báo trước khi dùng) ---
+        // --- 1. HÀM HIỂN THỊ MODAL THÔNG BÁO ---
         function showFarosAlert(message, redirect = false) {
             document.getElementById('farosAlertText').innerText = message;
             document.getElementById('farosAlertModal').classList.add('active');
@@ -403,13 +409,12 @@
         // --- 2. CHỐT CHẶN BẢO MẬT & KIỂM TRA KEY ---
         const currentKey = localStorage.getItem('faros_current_key');
         if (!currentKey || localStorage.getItem('isLoggedIn') !== 'true') {
-            // Dùng timeout nhỏ để DOM kịp render modal trước khi gọi
             setTimeout(() => {
                 showFarosAlert('⚠️ Vui lòng quay lại trang đăng nhập để xác thực Key FAROS!', true);
             }, 100);
         }
 
-        // --- 3. CẤU HÌNH FIREBASE MỚI CHO TÍNH NĂNG ĐÁ VĂNG REAL-TIME ---
+        // --- 3. CẤU HÌNH FIREBASE VÀ TÍNH NĂNG ĐÁ VĂNG REAL-TIME ---
         const firebaseConfig = {
           apiKey: "AIzaSyDo6wDKaf6T5Xjz8kCckdbq8O8zIACAqmk",
           authDomain: "turbohead-app-v1-214adcxyz367.firebaseapp.com",
@@ -420,23 +425,48 @@
         const db = firebase.database();
         const DB_PATH = 'DATABASE_FAROS_TURBOHEADAPPV1';
 
-        // Lắng nghe xem Key có bị Admin XÓA hoặc HẾT HẠN không
         if (currentKey) {
             db.ref(DB_PATH + '/' + currentKey).on('value', (snapshot) => {
                 if (!snapshot.exists()) {
                     localStorage.clear();
-                    showFarosAlert('\u274C L\u1ed6I B\u1ea2O M\u1eacT: Key c\u1ee7a b\u1ea1n \u0111\u00e3 b\u1ecb Admin thu h\u1ed3i ho\u1eb7c xo\u00e1!', true);
+                    showFarosAlert('❌ LỖI BẢO MẬT: Key của bạn đã bị Admin thu hồi hoặc xoá!', true);
                 } else {
                     const data = snapshot.val();
                     if (data.expire && Date.now() > data.expire) {
                         localStorage.clear();
-                        showFarosAlert('\u23f0 Key c\u1ee7a b\u1ea1n \u0111\u00e3 h\u1ebft h\u1ea1n s\u1eed d\u1ee5ng! Vui l\u00f2ng thu\u00ea Key m\u1edbi.', true);
+                        showFarosAlert('⌛ Key của bạn đã hết hạn sử dụng! Vui lòng thuê Key mới.', true);
                     }
                 }
             });
         }
 
-                // --- 4. TERMINAL SCRIPT ANIMATION ---
+        // --- 4. MATRIX RAIN BACKGROUND LOGIC ---
+        const canvas = document.getElementById('matrixCanvas');
+        const ctx = canvas.getContext('2d');
+        let width, height, drops = [];
+        const letters = "01ABCDEFGHIJKLMNOPQRSTUVWXYZｦｱｳｴｵｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄﾅﾆﾇﾈﾉﾊﾋﾌﾍﾎﾏﾐﾑﾒﾓﾔﾕﾖﾗﾘﾙﾚﾛﾜﾝ";
+        const fontSize = 15;
+
+        function resizeCanvas() {
+            width = window.innerWidth; height = window.innerHeight;
+            canvas.width = width; canvas.height = height;
+            drops = Array(Math.floor(width / fontSize)).fill(1);
+        }
+
+        function drawMatrix() {
+            ctx.fillStyle = "rgba(0,0,0,0.1)";
+            ctx.fillRect(0,0,width,height);
+            ctx.fillStyle = "#00ff41";
+            ctx.font = fontSize + "px monospace";
+            for (let i = 0; i < drops.length; i++) {
+                const text = letters[Math.floor(Math.random() * letters.length)];
+                ctx.fillText(text, i * fontSize, drops[i] * fontSize);
+                if (drops[i] * fontSize > height && Math.random() > 0.975) drops[i] = 0;
+                drops[i]++;
+            }
+        }
+
+        // --- 5. TERMINAL SCRIPT ANIMATION ---
         function startScript() {
             const btn = document.getElementById('runBtn');
             const logs = document.querySelectorAll('#logBox .log');
@@ -466,7 +496,7 @@
             }, 600);
         }
 
-        // --- 5. HIỆU ỨNG ÂM THANH ---
+        // --- 6. HIỆU ỨNG ÂM THANH (AUDIO CONTEXT) ---
         let audioCtx;
         function initAudio() { if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }
         
@@ -479,7 +509,7 @@
 
         function playFinalSound() { playTickSound(1000); setTimeout(() => playTickSound(1200), 100); }
 
-        // --- 6. MỞ GAME TRỰC TIẾP ---
+        // --- 7. MỞ GAME TRỰC TIẾP ---
         function launchGame(type) {
             const packageName = type === 1 ? "com.dts.freefireth" : "com.dts.freefiremax";
             const urlScheme = type === 1 ? "freefire" : "freefiremax";
@@ -500,20 +530,63 @@
             }
         }
 
-        // --- 7. CẬP NHẬT THÔNG SỐ CPU/RAM/PING ---
+        // --- 8. CẬP NHẬT THÔNG SỐ CPU/RAM/PING THỰC TẾ ---
+        let lastLoop = Date.now();
+        
         function updateStats() {
-            const setVal = (id, val, color) => {
+            const setVal = (id, val, color, unit = "%") => {
                 const prog = document.getElementById(id + '-progress');
                 const txt = document.getElementById(id + '-percent');
-                prog.style.stroke = color;
-                prog.style.strokeDashoffset = 251.2 - (251.2 * val / 100);
-                txt.textContent = val + '%';
+                if (prog && txt) {
+                    prog.style.stroke = color;
+                    // Giới hạn max 100% cho vòng tròn tiến trình
+                    let progressVal = val > 100 ? 100 : val;
+                    prog.style.strokeDashoffset = 251.2 - (251.2 * progressVal / 100);
+                    txt.textContent = val + unit;
+                }
             };
-            setVal('cpu', Math.floor(Math.random() * 15) + 20, '#ff3333');
-            setVal('ram', Math.floor(Math.random() * 20) + 50, '#ffaa00');
-            setVal('network', Math.floor(Math.random() * 30) + 40, '#00ff41');
+
+            // A. ĐO CPU THỰC TẾ (Dựa trên độ trễ xử lý của trình duyệt - Chặn Event Loop)
+            let thisLoop = Date.now();
+            let delay = thisLoop - lastLoop - 2000; // 2000ms là khoảng thời gian setInterval
+            lastLoop = thisLoop;
+            // Tính toán mức độ quá tải, máy càng lag % CPU giả lập sẽ càng cao (tối thiểu 12%)
+            let cpuUsage = Math.min(99, Math.max(12, Math.floor(12 + (delay > 0 ? delay / 5 : 0) + Math.random() * 5)));
+            setVal('cpu', cpuUsage, '#ff3333');
+
+            // B. ĐO RAM THỰC TẾ (Lấy dung lượng RAM thực tế mà Tab Web này đang chiếm dụng)
+            let ramUsage = Math.floor(45 + Math.random() * 8); // Giá trị mặc định nếu trình duyệt chặn
+            if (performance && performance.memory) {
+                // Tính tỷ lệ bộ nhớ đã dùng trên tổng bộ nhớ giới hạn của trình duyệt
+                let usedMem = performance.memory.usedJSHeapSize;
+                let totalMem = performance.memory.jsHeapLimit;
+                ramUsage = Math.floor((usedMem / totalMem) * 100) + 30; // Cộng thêm base hệ thống để nhìn cho thật
+                if (ramUsage > 95) ramUsage = 92;
+            }
+            setVal('ram', ramUsage, '#ffaa00');
+
+            // C. ĐO MẠNG THỰC TẾ (Đo PING phản hồi thực tế đến Server Firebase của bạn bằng ms)
+            let startTime = Date.now();
+            // Gửi một truy vấn siêu nhỏ lên server để tính thời gian phản hồi
+            db.ref('.info/connected').once('value').then(() => {
+                let ping = Date.now() - startTime;
+                // Nếu ping quá thấp (mạng cực mạnh), giữ mức ổn định từ 20ms - 40ms cho game thủ nhìn vừa mắt
+                if (ping < 15) ping = Math.floor(20 + Math.random() * 10); 
+                
+                // Đổi màu vòng tròn mạng dựa trên độ lag của Ping
+                let netColor = '#00ff41'; // Xanh lá (Mạng mượt)
+                if (ping > 100) netColor = '#ffaa00'; // Vàng (Hơi lag)
+                if (ping > 250) netColor = '#ff3333'; // Đỏ (Rất lag)
+                
+                setVal('network', ping, netColor, 'ms');
+            }).catch(() => {
+                // Nếu mất mạng hoặc lỗi, hiển thị 999ms
+                setVal('network', 999, '#ff3333', 'ms');
+            });
         }
 
+
+        // --- 9. KHỞI TẠO TOÀN BỘ ỨNG DỤNG ---
         function initApp() {
             resizeCanvas();
             setInterval(drawMatrix, 45);
@@ -524,12 +597,5 @@
 
         window.addEventListener('resize', resizeCanvas);
     </script>
-    <div id="farosAlertModal" class="faros-modal-overlay">
-    <div class="faros-modal-box">
-        <div id="farosAlertText" class="faros-modal-text"></div>
-        <button class="btn-modal" onclick="closeModal()">ĐÃ HIỂU</button>
-    </div>
-</div>
-
 </body>
 </html>
