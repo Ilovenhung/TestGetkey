@@ -531,47 +531,62 @@
         }
 
                 // --- 8. CẬP NHẬT THÔNG SỐ CPU/RAM/PING THỰC TẾ ---
-        let lastLoop = Date.now();
-        
-        function updateStats() {
-            const setVal = (id, val, color, unit = "%") => {
-                const prog = document.getElementById(id + '-progress');
-                const txt = document.getElementById(id + '-percent');
-                if (prog && txt) {
-                    prog.style.stroke = color;
-                    // Giới hạn max 100% cho vòng tròn tiến trình
-                    let progressVal = val > 100 ? 100 : val;
-                    prog.style.strokeDashoffset = 251.2 - (251.2 * progressVal / 100);
-                    txt.textContent = val + unit;
-                }
-            };
+let lastLoop = Date.now();
 
-            // A. ĐO CPU THỰC TẾ (Dựa trên độ trễ xử lý của trình duyệt)
-            let thisLoop = Date.now();
-            let delay = thisLoop - lastLoop - 2000; 
-            lastLoop = thisLoop;
-            let cpuUsage = Math.min(99, Math.max(12, Math.floor(12 + (delay > 0 ? delay / 5 : 0) + Math.random() * 5)));
-            setVal('cpu', cpuUsage, '#ff3333');
+// 1. Khởi tạo giá trị RAM ban đầu (ví dụ: 40%)
+let currentRam = Math.floor(Math.random() * (65 - 20 + 1)) + 20; 
 
-            // B. ĐO RAM (Chạy ngẫu nhiên từ 20% đến 65% theo yêu cầu)
-            let ramUsage = Math.floor(Math.random() * (65 - 20 + 1)) + 20;
-            setVal('ram', ramUsage, '#ffaa00');
-
-            // C. ĐO MẠNG THỰC TẾ (Đo PING phản hồi thực tế đến Server bằng ms)
-            let startTime = Date.now();
-            db.ref('.info/connected').once('value').then(() => {
-                let ping = Date.now() - startTime;
-                if (ping < 15) ping = Math.floor(20 + Math.random() * 10); 
-                
-                let netColor = '#00ff41'; 
-                if (ping > 100) netColor = '#ffaa00'; 
-                if (ping > 250) netColor = '#ff3333'; 
-                
-                setVal('network', ping, netColor, 'ms');
-            }).catch(() => {
-                setVal('network', 999, '#ff3333', 'ms');
-            });
+function updateStats() {
+    const setVal = (id, val, color, unit = "%") => {
+        const prog = document.getElementById(id + '-progress');
+        const txt = document.getElementById(id + '-percent');
+        if (prog && txt) {
+            prog.style.stroke = color;
+            // Giới hạn max 100% cho vòng tròn tiến trình
+            let progressVal = val > 100 ? 100 : val;
+            prog.style.strokeDashoffset = 251.2 - (251.2 * progressVal / 100);
+            txt.textContent = val + unit;
         }
+    };
+
+    // A. ĐO CPU THỰC TẾ (Dựa trên độ trễ xử lý của trình duyệt)
+    let thisLoop = Date.now();
+    let delay = thisLoop - lastLoop - 2000; 
+    lastLoop = thisLoop;
+    let cpuUsage = Math.min(99, Math.max(12, Math.floor(12 + (delay > 0 ? delay / 5 : 0) + Math.random() * 5)));
+    setVal('cpu', cpuUsage, '#ff3333');
+
+    // B. ĐO RAM CHÂN THẬT (Thay đổi mượt mà trong khoảng 20% - 65%)
+    // Tạo mức độ thay đổi nhỏ (từ -2% đến +2%)
+    let ramDelta = Math.floor(Math.random() * 5) - 2; 
+    currentRam += ramDelta;
+
+    // Ép thanh RAM luôn nằm trong khoảng [20, 65]
+    if (currentRam < 20) currentRam = 20 + Math.floor(Math.random() * 3);
+    if (currentRam > 65) currentRam = 65 - Math.floor(Math.random() * 3);
+
+    // Xác định màu sắc theo mức độ chiếm dụng RAM (Tùy chọn cho sinh động)
+    let ramColor = '#00ff41'; // Xanh lá (< 45%)
+    if (currentRam >= 45 && currentRam < 58) ramColor = '#ffaa00'; // Cam
+    if (currentRam >= 58) ramColor = '#ff3333'; // Đỏ
+
+    setVal('ram', currentRam, ramColor);
+
+    // C. ĐO MẠNG THỰC TẾ (Đo PING phản hồi thực tế đến Server bằng ms)
+    let startTime = Date.now();
+    db.ref('.info/connected').once('value').then(() => {
+        let ping = Date.now() - startTime;
+        if (ping < 15) ping = Math.floor(20 + Math.random() * 10); 
+        
+        let netColor = '#00ff41'; 
+        if (ping > 100) netColor = '#ffaa00'; 
+        if (ping > 250) netColor = '#ff3333'; 
+        
+        setVal('network', ping, netColor, 'ms');
+    }).catch(() => {
+        setVal('network', 999, '#ff3333', 'ms');
+    });
+}
 
 
         // --- 9. KHỞI TẠO TOÀN BỘ ỨNG DỤNG ---
