@@ -151,12 +151,14 @@
 
     let destructionInterval;
 
-    window.onload = () => {
+        window.onload = () => {
       const urlParams = new URLSearchParams(window.location.search);
       const urlToken = urlParams.get('t');
       const now = Date.now();
 
+      // PHẢI CÓ DÒNG NÀY ĐỂ KIỂM TRA CÓ TOKEN TRÊN URL KHÔNG
       if (urlToken) {
+        // PHẢI CÓ 2 DÒNG NÀY ĐỂ LẤY DỮ LIỆU TỪ TRÌNH DUYỆT RA SO SÁNH
         const savedToken = localStorage.getItem('faros_auth_token');
         const tokenExpire = parseInt(localStorage.getItem('faros_token_expire') || '0');
 
@@ -166,6 +168,12 @@
           localStorage.setItem('faros_destroy_timestamp', now + (2 * 60 * 1000));
           window.history.replaceState({}, document.title, window.location.pathname);
         } else {
+          // BÁO LỖI CHI TIẾT
+          if (urlToken !== savedToken) {
+             alert("Lỗi: Mã xác thực không khớp hoặc bị mất!\n- URL Token: " + urlToken + "\n- Trình duyệt lưu: " + savedToken + "\n\nNguyên nhân có thể do bạn mở link ở trình duyệt khác, hoặc bộ nhớ Cache của web chưa cập nhật bản code mới.");
+          } else if (now >= tokenExpire) {
+             alert("Lỗi: Đã quá thời gian chờ vượt link! Vui lòng quay lại làm lại.");
+          }
           showPanel('error'); return;
         }
       }
@@ -178,6 +186,7 @@
 
       checkAlreadyClaimed();
     };
+
 
     function showPanel(name) {
       document.getElementById('panelError').style.display = 'none';
