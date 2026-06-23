@@ -227,16 +227,15 @@
       }
     });
 
-    document.getElementById('btnOpenGetKey').addEventListener('click', () => getKeyModal.classList.add('active'));
-    document.getElementById('btnCancelGetKey').addEventListener('click', () => getKeyModal.classList.remove('active'));
-    document.getElementById('btnConfirmGetKey').addEventListener('click', () => {
+       document.getElementById('btnConfirmGetKey').addEventListener('click', () => {
       const tokenArr = new Uint8Array(16);
       crypto.getRandomValues(tokenArr);
       const token = Array.from(tokenArr).map(b => b.toString(16).padStart(2,'0')).join('');
       const expireTime = Date.now() + (5 * 60 * 1000); 
 
-      sessionStorage.setItem('faros_auth_token', token);
-      sessionStorage.setItem('faros_token_expire', expireTime);
+      // ĐÃ SỬA THÀNH localStorage
+      localStorage.setItem('faros_auth_token', token);
+      localStorage.setItem('faros_token_expire', expireTime);
 
       getKeyModal.classList.remove('active');
       let currentPath = window.location.href.split('?')[0];
@@ -246,6 +245,7 @@
       let encodedUrl = encodeURIComponent(destinationUrl);
       window.location.href = `https://api.taplayma.com/st?token=28afb061-cd33-4178-98e5-161f3f88e996&url=${encodedUrl}`;
     });
+
 
     function clearSavedLogin() {
       localStorage.removeItem('savedLoginKey');
