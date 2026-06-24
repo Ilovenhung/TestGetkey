@@ -98,7 +98,7 @@
       <div class="progress-text" id="progressText">Đang kiểm tra hệ thống... 0%</div>
     </div>
     <div class="result-wrapper" id="resultWrapper">
-      <div class="key-display" id="keyDisplay">FAROS-3H-XXXXXXXXX</div>
+      <div class="key-display" id="keyDisplay">FAROS-3H-XXXXXX</div>
       <button class="btn-copy" id="btnCopy">📋 SAO CHÉP KEY</button>
       <button class="btn-generate" id="btnGetAnother" style="margin-top:12px; display:none;">🔄 Lấy thêm Key</button>
       <div style="margin-top:15px; font-size:0.8rem; color:#888;">Hãy copy Key và quay lại trang đăng nhập nhé!</div>
@@ -191,20 +191,22 @@
     let destructionInterval;
 
     window.onload = async () => {
-      // Lấy fingerprint ngay khi load
       myFingerprint = await getDeviceFingerprint();
 
       const urlParams = new URLSearchParams(window.location.search);
-      const urlToken = urlParams.get('t');
+      const urlToken = urlParams.get('t') || new URLSearchParams(window.location.hash.replace('#','?')).get('t');
       const now = Date.now();
 
       if (urlToken) {
         const savedToken = localStorage.getItem('faros_auth_token');
         const tokenExpire = parseInt(localStorage.getItem('faros_token_expire') || '0');
+        const tokenMatch = savedToken && urlToken.toLowerCase() === savedToken.toLowerCase();
 
-        if (urlToken === savedToken && now < tokenExpire) {
+        if (tokenMatch && now < tokenExpire) {
           localStorage.setItem('faros_link_authorized', 'true');
           localStorage.removeItem('faros_generated_key');
+          localStorage.removeItem('faros_auth_token');
+          localStorage.removeItem('faros_token_expire');
           localStorage.setItem('faros_destroy_timestamp', now + (2 * 60 * 1000));
           window.history.replaceState({}, document.title, window.location.pathname);
         } else {
@@ -218,8 +220,12 @@
       if (!isAuthorized || !destroyTimestamp) { showPanel('error'); return; }
       if (now >= destroyTimestamp) { handleLinkExpired(); return; }
 
-      // Chờ Firebase Auth ẩn danh hoàn tất
-      await authReady;
+      const authTimeout = new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 8000));
+      try {
+        await Promise.race([authReady, authTimeout]);
+      } catch (e) {
+        console.warn('Firebase auth timeout, tiep tuc...');
+      }
 
       checkAlreadyClaimed();
     };
