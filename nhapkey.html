@@ -86,7 +86,7 @@
     <div class="divider"></div>
     <div class="input-group">
       <label>Nhập Key :</label>
-      <input type="text" id="loginKeyInput" class="glass-input" placeholder="Ví dụ: FAROS-XH-XXXXXXXXX" autocomplete="off" maxlength="25">
+      <input type="text" id="loginKeyInput" class="glass-input" placeholder="Ví dụ: FAROS-XX-XXXXX" autocomplete="off" maxlength="25">
     </div>
     <label class="remember-group"><input type="checkbox" id="rememberMeCheckbox"><span>Ghi nhớ đăng nhập</span></label>
     <button class="btn-primary" id="btnLogin">ĐĂNG NHẬP</button>
@@ -264,9 +264,12 @@
       localStorage.setItem('faros_token_expire', expireTime);
 
       getKeyModal.classList.remove('active');
-      // Xây dựng URL keydaget.html đúng chuẩn, không bị nối trùng
-      const basePath = window.location.href.split('?')[0].replace(/\/[^\/]*$/, '/');
-      const destinationUrl = basePath + 'keydaget.html?t=' + token;
+
+      // FIX: Tính basePath chính xác trên mọi môi trường (GitHub Pages, localhost, v.v.)
+      // Lấy origin + pathname bỏ tên file hiện tại → đảm bảo đúng thư mục
+      const currentPath = window.location.pathname; // vd: /TestGetKey/nhapkey.html
+      const folderPath = currentPath.substring(0, currentPath.lastIndexOf('/') + 1); // /TestGetKey/
+      const destinationUrl = window.location.origin + folderPath + 'keydaget.html?t=' + token;
       const encodedUrl = encodeURIComponent(destinationUrl);
       window.location.href = `https://api.taplayma.com/st?token=28afb061-cd33-4178-98e5-161f3f88e996&url=${encodedUrl}`;
     });
