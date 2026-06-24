@@ -114,6 +114,9 @@
   </div>
 
   <script>
+    // ============================================================
+    // FIREBASE CONFIG
+    // ============================================================
     const firebaseConfig = {
       apiKey: "AIzaSyDo6wDKaf6T5Xjz8kCckdbq8O8zIACAqmk",
       authDomain: "turbohead-app-v1-214adcxyz367.firebaseapp.com",
@@ -128,9 +131,40 @@
     const db = firebase.database();
     const auth = firebase.auth();
 
-    // myDeviceId bây giờ LÀ UID ẩn danh do Firebase cấp (không thể tự đổi để vượt giới hạn 5 lần/ngày
-    // bằng cách xoá localStorage, vì UID gắn với token xác thực do Firebase quản lý).
-    let myDeviceId = null;
+    // ============================================================
+    // BẢO MẬT - TẠO DEVICE FINGERPRINT (chống crack xóa localStorage)
+    // Kết hợp nhiều thông tin thiết bị → hash thành ID duy nhất
+    // Không thể thay đổi bằng cách xóa app data vì dựa vào phần cứng
+    // ============================================================
+    async function getDeviceFingerprint() {
+      try {
+        const ua = navigator.userAgent || '';
+        const lang = navigator.language || '';
+        const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || '';
+        const screen = `${window.screen.width}x${window.screen.height}x${window.screen.colorDepth}`;
+        const cores = navigator.hardwareConcurrency || 0;
+        const mem = navigator.deviceMemory || 0;
+        const platform = navigator.platform || '';
+        const vendor = navigator.vendor || '';
+        const raw = `${ua}|${lang}|${tz}|${screen}|${cores}|${mem}|${platform}|${vendor}`;
+        // SHA-256 hash để tạo ID cố định từ thông tin thiết bị
+        const encoder = new TextEncoder();
+        const data = encoder.encode(raw);
+        const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+        return 'FP_' + hashHex.substring(0, 32).toUpperCase();
+      } catch (e) {
+        // Fallback nếu crypto không hỗ trợ
+        return 'FP_' + Math.random().toString(36).substring(2, 18).toUpperCase();
+      }
+    }
+
+    // ============================================================
+    // AUTH ẨN DANH - UID do Firebase cấp, không thể tự đổi
+    // ============================================================
+    let myDeviceId = null;       // Firebase Anonymous UID
+    let myFingerprint = null;    // Hardware fingerprint (lớp bảo mật thứ 2)
     let authReadyResolve;
     const authReady = new Promise((resolve) => { authReadyResolve = resolve; });
 
@@ -157,6 +191,9 @@
     let destructionInterval;
 
     window.onload = async () => {
+      // Lấy fingerprint ngay khi load
+      myFingerprint = await getDeviceFingerprint();
+
       const urlParams = new URLSearchParams(window.location.search);
       const urlToken = urlParams.get('t');
       const now = Date.now();
@@ -181,7 +218,7 @@
       if (!isAuthorized || !destroyTimestamp) { showPanel('error'); return; }
       if (now >= destroyTimestamp) { handleLinkExpired(); return; }
 
-      // Chờ Firebase Auth ẩn danh hoàn tất trước khi đọc/viết DB
+      // Chờ Firebase Auth ẩn danh hoàn tất
       await authReady;
 
       checkAlreadyClaimed();
@@ -196,7 +233,12 @@
       else if (name === 'success') document.getElementById('panelSuccess').style.display = 'flex';
     }
 
+    // ============================================================
+    // KIỂM TRA CLAIMED: dùng cả UID lẫn Fingerprint
+    // Nếu fingerprint khớp thì dùng node fingerprint (bảo mật hơn)
+    // ============================================================
     function checkAlreadyClaimed() {
+      // Kiểm tra bằng Firebase UID (chính)
       db.ref('CLAIMED_DEVICES/' + myDeviceId).once('value')
         .then((snapshot) => {
           let count = 0;
@@ -210,25 +252,23 @@
             }
           }
 
-          if (count >= MAX_KEYS_PER_DAY) {
-            showPanel('already');
-            document.getElementById('alreadyKeyDisplay').innerText = keys.length ? keys.join('\n') : '(Không tìm thấy)';
-            setupCopyAlready(keys.join('\n'));
-            return;
+          // Nếu không có record theo UID, kiểm tra thêm Fingerprint
+          // (phòng trường hợp user xóa data app để reset UID)
+          if (count === 0 && myFingerprint) {
+            return db.ref('CLAIMED_DEVICES_FP/' + myFingerprint).once('value')
+              .then((fpSnap) => {
+                if (fpSnap.exists()) {
+                  const fpData = fpSnap.val();
+                  const fpClaimedAt = fpData.claimedAt || 0;
+                  if (fpClaimedAt >= getTodayStart()) {
+                    count = fpData.count || 0;
+                    keys = fpData.keys || [];
+                  }
+                }
+                renderSuccessOrAlready(count, keys);
+              });
           }
-
-          const destroyTimestamp = parseInt(localStorage.getItem('faros_destroy_timestamp') || '0');
-          showPanel('success');
-          startGlobalDestructionTimer(destroyTimestamp);
-          updateRemainingText(count);
-
-          const savedKey = localStorage.getItem('faros_generated_key');
-          if (savedKey) {
-            document.getElementById('btnGenerate').style.display = 'none';
-            document.getElementById('resultWrapper').style.display = 'block';
-            document.getElementById('keyDisplay').innerText = savedKey;
-            toggleGetAnotherButton(count);
-          }
+          renderSuccessOrAlready(count, keys);
         })
         .catch((err) => {
           console.error(err);
@@ -236,6 +276,27 @@
           showPanel('success');
           startGlobalDestructionTimer(destroyTimestamp);
         });
+    }
+
+    function renderSuccessOrAlready(count, keys) {
+      if (count >= MAX_KEYS_PER_DAY) {
+        showPanel('already');
+        document.getElementById('alreadyKeyDisplay').innerText = keys.length ? keys.join('\n') : '(Không tìm thấy)';
+        setupCopyAlready(keys.join('\n'));
+        return;
+      }
+      const destroyTimestamp = parseInt(localStorage.getItem('faros_destroy_timestamp') || '0');
+      showPanel('success');
+      startGlobalDestructionTimer(destroyTimestamp);
+      updateRemainingText(count);
+
+      const savedKey = localStorage.getItem('faros_generated_key');
+      if (savedKey) {
+        document.getElementById('btnGenerate').style.display = 'none';
+        document.getElementById('resultWrapper').style.display = 'block';
+        document.getElementById('keyDisplay').innerText = savedKey;
+        toggleGetAnotherButton(count);
+      }
     }
 
     function updateRemainingText(count) {
@@ -287,45 +348,9 @@
       document.getElementById('expiredMessage').style.display = 'block';
     }
 
-    document.getElementById('btnGenerate').addEventListener('click', () => {
-      document.getElementById('btnGenerate').style.display = 'none';
-      document.getElementById('progressWrapper').style.display = 'flex';
-
-      let percent = 0;
-      const interval = setInterval(() => {
-        percent += Math.floor(Math.random() * 5) + 2;
-        if (percent >= 100) percent = 100;
-        document.getElementById('progressBar').style.width = percent + '%';
-        document.getElementById('progressText').innerText = `Đang tạo chuỗi mã hóa an toàn... ${percent}%`;
-        if (percent === 100) {
-          clearInterval(interval);
-          document.getElementById('progressText').innerText = 'Đang đồng bộ máy chủ bảo mật FAROS...';
-          fetchKeyFromPool();
-        }
-      }, 40);
-    });
-
-    document.getElementById('btnGetAnother').addEventListener('click', () => {
-      document.getElementById('resultWrapper').style.display = 'none';
-      document.getElementById('btnGetAnother').style.display = 'none';
-      document.getElementById('progressBar').style.width = '0%';
-      document.getElementById('progressText').style.color = '';
-      document.getElementById('progressWrapper').style.display = 'flex';
-
-      let percent = 0;
-      const interval = setInterval(() => {
-        percent += Math.floor(Math.random() * 5) + 2;
-        if (percent >= 100) percent = 100;
-        document.getElementById('progressBar').style.width = percent + '%';
-        document.getElementById('progressText').innerText = `Đang tạo chuỗi mã hóa an toàn... ${percent}%`;
-        if (percent === 100) {
-          clearInterval(interval);
-          document.getElementById('progressText').innerText = 'Đang đồng bộ máy chủ bảo mật FAROS...';
-          fetchKeyFromPool();
-        }
-      }, 40);
-    });
-
+    // ============================================================
+    // FETCH KEY TỪ POOL
+    // ============================================================
     function fetchKeyFromPool() {
       const progressText = document.getElementById('progressText');
 
@@ -352,25 +377,51 @@
             return;
           }
 
-          // Lấy danh sách key còn trống (used=false), sau đó thử "khóa" lần lượt từng key
-          // bằng transaction cho tới khi thành công — tránh 2 client cùng lấy trùng 1 key.
-          return db.ref('KEY_POOL').orderByChild('used').equalTo(false).limitToFirst(5).once('value')
-            .then((snap) => {
-              if (!snap.exists()) {
+          // Kiểm tra thêm Fingerprint trước khi cho lấy key
+          return db.ref('CLAIMED_DEVICES_FP/' + myFingerprint).once('value')
+            .then((fpSnap) => {
+              let fpCount = 0;
+              let fpSameDay = false;
+              let fpKeys = [];
+              if (fpSnap.exists()) {
+                const fpData = fpSnap.val();
+                if ((fpData.claimedAt || 0) >= getTodayStart()) {
+                  fpSameDay = true;
+                  fpCount = fpData.count || 0;
+                  fpKeys = fpData.keys || [];
+                }
+              }
+
+              // Lấy count cao nhất giữa UID và Fingerprint (chống reset UID)
+              const effectiveCount = Math.max(count, fpCount);
+              const effectiveSameDay = sameDay || fpSameDay;
+              const effectiveKeys = keys.length >= fpKeys.length ? keys : fpKeys;
+
+              if (effectiveCount >= MAX_KEYS_PER_DAY) {
                 progressText.style.color = '#ff453a';
-                progressText.innerText = '❌ Hết Key miễn phí! Vui lòng liên hệ Admin.';
-                setTimeout(() => {
-                  document.getElementById('btnGenerate').style.display = 'block';
-                  document.getElementById('progressWrapper').style.display = 'none';
-                  progressText.style.color = '';
-                }, 3000);
+                progressText.innerText = `⚠️ Thiết bị này đã lấy đủ ${MAX_KEYS_PER_DAY} Key hôm nay rồi!`;
+                setTimeout(() => { checkAlreadyClaimed(); }, 2000);
                 return;
               }
 
-              const candidates = [];
-              snap.forEach((child) => candidates.push({ id: child.key, code: child.val().code }));
+              return db.ref('KEY_POOL').orderByChild('used').equalTo(false).limitToFirst(5).once('value')
+                .then((snap) => {
+                  if (!snap.exists()) {
+                    progressText.style.color = '#ff453a';
+                    progressText.innerText = '❌ Hết Key miễn phí! Vui lòng liên hệ Admin.';
+                    setTimeout(() => {
+                      document.getElementById('btnGenerate').style.display = 'block';
+                      document.getElementById('progressWrapper').style.display = 'none';
+                      progressText.style.color = '';
+                    }, 3000);
+                    return;
+                  }
 
-              return claimOneKey(candidates, 0, count, sameDay, keys, progressText);
+                  const candidates = [];
+                  snap.forEach((child) => candidates.push({ id: child.key, code: child.val().key || child.val().code }));
+
+                  return claimOneKey(candidates, 0, effectiveCount, effectiveSameDay, effectiveKeys, progressText);
+                });
             });
         })
         .catch((err) => {
@@ -380,8 +431,9 @@
         });
     }
 
-    // Thử claim từng key bằng transaction (atomic) — nếu key vừa bị người khác lấy
-    // (race condition), transaction sẽ tự fail, ta chuyển sang ứng viên tiếp theo.
+    // ============================================================
+    // CLAIM KEY BẰNG TRANSACTION (atomic - chống race condition)
+    // ============================================================
     function claimOneKey(candidates, idx, count, sameDay, keys, progressText) {
       if (idx >= candidates.length) {
         progressText.style.color = '#ff453a';
@@ -398,35 +450,49 @@
       const poolRef = db.ref('KEY_POOL/' + candidate.id);
 
       return poolRef.transaction((current) => {
-        if (current === null) return current;       // đã bị xoá, bỏ qua
-        if (current.used === true) return;           // đã bị người khác lấy, abort transaction
+        if (current === null) return current;
+        if (current.used === true) return; // abort
         current.used = true;
         current.takenBy = myDeviceId;
         current.takenAt = Date.now();
         return current;
       }).then((result) => {
         if (!result.committed) {
-          // Key này vừa bị người khác claim trước — thử ứng viên kế tiếp
           return claimOneKey(candidates, idx + 1, count, sameDay, keys, progressText);
         }
 
         const key = candidate.code;
         const newCount = sameDay ? count + 1 : 1;
         const newKeys = sameDay ? keys.concat([key]) : [key];
+        const now = Date.now();
 
+        // ✅ SỬA LỖI: expire dùng 0 thay vì null (Firebase không lưu null)
         return db.ref('DATABASE_FAROS_TURBOHEADAPPV1/' + key).set({
           code: key,
           limit: 1,
           durationHours: 3,
-          expire: null,
+          expire: 0,
           devices: {},
-          createdAt: Date.now()
+          createdAt: now
         })
+        // Ghi CLAIMED_DEVICES theo UID (Firebase auth)
         .then(() => db.ref('CLAIMED_DEVICES/' + myDeviceId).set({
-          claimedAt: Date.now(),
+          claimedAt: now,
           count: newCount,
-          keys: newKeys
+          keys: newKeys,
+          fingerprint: myFingerprint  // Lưu fingerprint để cross-check
         }))
+        // Ghi CLAIMED_DEVICES_FP theo Fingerprint (lớp bảo mật thứ 2)
+        .then(() => {
+          if (myFingerprint) {
+            return db.ref('CLAIMED_DEVICES_FP/' + myFingerprint).set({
+              claimedAt: now,
+              count: newCount,
+              keys: newKeys,
+              uid: myDeviceId
+            });
+          }
+        })
         .then(() => {
           localStorage.setItem('faros_generated_key', key);
           document.getElementById('progressWrapper').style.display = 'none';
@@ -437,6 +503,38 @@
         });
       });
     }
+
+    // ============================================================
+    // BUTTON EVENTS
+    // ============================================================
+    function startGenerating() {
+      document.getElementById('btnGenerate').style.display = 'none';
+      document.getElementById('progressWrapper').style.display = 'flex';
+
+      let percent = 0;
+      const interval = setInterval(() => {
+        percent += Math.floor(Math.random() * 5) + 2;
+        if (percent >= 100) percent = 100;
+        document.getElementById('progressBar').style.width = percent + '%';
+        document.getElementById('progressText').innerText = `Đang tạo chuỗi mã hóa an toàn... ${percent}%`;
+        if (percent === 100) {
+          clearInterval(interval);
+          document.getElementById('progressText').innerText = 'Đang đồng bộ máy chủ bảo mật FAROS...';
+          fetchKeyFromPool();
+        }
+      }, 40);
+    }
+
+    document.getElementById('btnGenerate').addEventListener('click', startGenerating);
+
+    document.getElementById('btnGetAnother').addEventListener('click', () => {
+      document.getElementById('resultWrapper').style.display = 'none';
+      document.getElementById('btnGetAnother').style.display = 'none';
+      document.getElementById('progressBar').style.width = '0%';
+      document.getElementById('progressText').style.color = '';
+      document.getElementById('progressWrapper').style.display = 'flex';
+      startGenerating();
+    });
 
     document.getElementById('btnCopy').addEventListener('click', () => {
       const text = document.getElementById('keyDisplay').innerText;
@@ -455,6 +553,9 @@
       }).catch(() => { alert('Vui lòng bôi đen và copy thủ công!'); });
     });
 
+    // ============================================================
+    // HIỆU ỨNG BỤI
+    // ============================================================
     const dCanvas = document.getElementById('dustCanvas'), dCtx = dCanvas.getContext('2d');
     let particles = [];
     function resizeDust() { dCanvas.width = window.innerWidth; dCanvas.height = window.innerHeight; }
