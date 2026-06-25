@@ -737,13 +737,32 @@
         });
       });
 
-      // XÓA TOÀN BỘ POOL
+      // XÓA TOÀN BỘ POOL - loop từng item (Firebase rule không cho xóa node cha)
       document.getElementById('btnResetAllPool').addEventListener('click', () => {
         showFarosConfirm('⚠️ XÓA TOÀN BỘ KEY_POOL? Không thể hoàn tác!', () => {
-          db.ref('KEY_POOL').remove().then(() => {
-            showFarosToast('✅ Đã xóa toàn bộ kho key free!');
-            loadPoolData();
-          }).catch((err) => { showFarosToast('❌ Lỗi: ' + err.message); });
+          const btn = document.getElementById('btnResetAllPool');
+          btn.disabled = true;
+          btn.innerText = 'ĐANG XÓA...';
+          db.ref('KEY_POOL').once('value').then((snap) => {
+            if (!snap.exists()) {
+              showFarosToast('ℹ️ Kho đã trống rồi!');
+              btn.disabled = false;
+              btn.innerText = '⚠️ XÓA TẤT CẢ';
+              return;
+            }
+            let removes = [];
+            snap.forEach((child) => { removes.push(child.ref.remove()); });
+            Promise.all(removes).then(() => {
+              showFarosToast(`✅ Đã xóa ${removes.length} key khỏi kho!`);
+              btn.disabled = false;
+              btn.innerText = '⚠️ XÓA TẤT CẢ';
+              loadPoolData();
+            }).catch((err) => {
+              showFarosToast('❌ Lỗi: ' + err.message);
+              btn.disabled = false;
+              btn.innerText = '⚠️ XÓA TẤT CẢ';
+            });
+          });
         });
       });
     }
