@@ -100,7 +100,6 @@
     <div class="result-wrapper" id="resultWrapper">
       <div class="key-display" id="keyDisplay">FAROS-3H-XXXXXX</div>
       <button class="btn-copy" id="btnCopy">📋 SAO CHÉP KEY</button>
-      <button class="btn-generate" id="btnGetAnother" style="margin-top:12px; display:none;">🔄 Lấy thêm Key</button>
       <div style="margin-top:15px; font-size:0.8rem; color:#888;">Hãy copy Key và quay lại trang đăng nhập nhé!</div>
     </div>
     <div id="expiredMessage">
@@ -354,17 +353,7 @@ expire ok: ${now < parseInt(localStorage.getItem('faros_token_expire')||'0')}`;
       if (el) el.innerText = count + '/' + MAX_KEYS_PER_DAY;
     }
 
-    function toggleGetAnotherButton(count) {
-      const btn = document.getElementById('btnGetAnother');
-      if (!btn) return;
-      const remaining = MAX_KEYS_PER_DAY - count;
-      if (remaining > 0) {
-        btn.style.display = 'block';
-        btn.innerText = `🔄 Lấy thêm Key (còn ${remaining} lượt)`;
-      } else {
-        btn.style.display = 'none';
-      }
-    }
+    function toggleGetAnotherButton(count) { /* đã bỏ nút lấy thêm */ }
 
     function setupCopyAlready(key) {
       document.getElementById('btnCopyAlready').addEventListener('click', () => {
@@ -576,15 +565,6 @@ expire ok: ${now < parseInt(localStorage.getItem('faros_token_expire')||'0')}`;
     }
 
     document.getElementById('btnGenerate').addEventListener('click', startGenerating);
-
-    document.getElementById('btnGetAnother').addEventListener('click', () => {
-      document.getElementById('resultWrapper').style.display = 'none';
-      document.getElementById('btnGetAnother').style.display = 'none';
-      document.getElementById('progressBar').style.width = '0%';
-      document.getElementById('progressText').style.color = '';
-      document.getElementById('progressWrapper').style.display = 'flex';
-      startGenerating();
-    });
 
     document.getElementById('btnCopy').addEventListener('click', () => {
       const text = document.getElementById('keyDisplay').innerText;
