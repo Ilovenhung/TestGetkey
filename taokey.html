@@ -122,6 +122,32 @@
     }
     .faros-select-item:last-child { border-bottom: none; }
     .faros-select-item:hover, .faros-select-item.active { background: rgba(10,132,255,0.15); color: var(--ios-blue); }
+
+    /* TAB SWITCHER */
+    .tab-bar { display: flex; gap: 8px; margin-bottom: 20px; background: rgba(0,0,0,0.3); border-radius: 14px; padding: 5px; }
+    .tab-btn { flex: 1; padding: 10px 6px; border: none; border-radius: 10px; font-size: 0.82rem; font-weight: 700; cursor: pointer; transition: 0.2s; background: transparent; color: var(--text-secondary); letter-spacing: 0.2px; }
+    .tab-btn.active { background: rgba(255,255,255,0.1); color: #fff; box-shadow: 0 2px 8px rgba(0,0,0,0.3); }
+    .tab-btn.tab-vip.active { background: linear-gradient(135deg, rgba(10,132,255,0.3), rgba(0,91,181,0.3)); color: #60b8ff; }
+    .tab-btn.tab-free.active { background: linear-gradient(135deg, rgba(48,209,88,0.3), rgba(26,122,50,0.3)); color: #5de88a; }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+
+    /* POOL KEY LIST */
+    .pool-list { margin-top: 10px; max-height: 300px; overflow-y: auto; background: rgba(0,0,0,0.25); border-radius: 14px; padding: 8px; border: 1.5px solid rgba(48,209,88,0.2); }
+    .pool-list::-webkit-scrollbar { width: 4px; }
+    .pool-list::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 4px; }
+    .pool-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 8px; border-bottom: 1px solid rgba(255,255,255,0.06); }
+    .pool-item:last-child { border-bottom: none; }
+    .pool-key-code { color: #30d158; font-family: monospace; font-weight: bold; font-size: 0.88rem; letter-spacing: 0.5px; }
+    .pool-key-status { font-size: 0.72rem; margin-top: 3px; }
+    .badge-unused { color: #30d158; font-weight: 600; }
+    .badge-used { color: #ff453a; font-weight: 600; }
+    .btn-reset-one { background: rgba(255,159,10,0.15); border: 1px solid rgba(255,159,10,0.4); color: #ff9f0a; padding: 6px 10px; border-radius: 8px; font-size: 0.7rem; cursor: pointer; font-weight: 700; white-space: nowrap; }
+    .btn-reset-one:active { background: rgba(255,159,10,0.3); }
+    .stats-bar { display: flex; gap: 8px; margin-bottom: 12px; }
+    .stat-chip { flex: 1; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 10px 6px; text-align: center; }
+    .stat-chip .stat-num { font-size: 1.3rem; font-weight: 900; }
+    .stat-chip .stat-label { font-size: 0.7rem; color: var(--text-secondary); margin-top: 2px; }
   </style>
 </head>
 <body>
@@ -139,57 +165,81 @@
 
   <div class="glass-panel" id="adminPanel">
     <h2>PANEL ADMIN FAROS</h2>
-    
-    <div class="input-group">
-      <label>Tạo Key (Để trống sẽ Random theo HSD):</label>
-      <div style="display: flex; gap:10px;">
-        <input type="text" id="adminCustomKey" class="glass-input" placeholder="FAROS-1D-XXXXX..." style="font-family: monospace; letter-spacing: 0.5px;">
-        <button class="btn-primary" id="btnRandomKey" style="width: 65px; font-size: 1.1rem; padding: 0; display: flex; align-items: center; justify-content: center;">🎲</button>
+
+    <!-- TAB BAR -->
+    <div class="tab-bar">
+      <button class="tab-btn tab-vip active" id="tabBtnVip" onclick="switchTab('vip')">🔵 KEY VIP</button>
+      <button class="tab-btn tab-free" id="tabBtnFree" onclick="switchTab('free')">🟢 KEY FREE</button>
+    </div>
+
+    <!-- ===== TAB VIP ===== -->
+    <div class="tab-content active" id="tabVip">
+      <div class="input-group">
+        <label>Tạo Key VIP (Để trống sẽ Random theo HSD):</label>
+        <div style="display: flex; gap:10px;">
+          <input type="text" id="adminCustomKey" class="glass-input" placeholder="FAROS-1D-XXXXX..." style="font-family: monospace; letter-spacing: 0.5px;">
+          <button class="btn-primary" id="btnRandomKey" style="width: 65px; font-size: 1.1rem; padding: 0; display: flex; align-items: center; justify-content: center;">🎲</button>
+        </div>
       </div>
-    </div>
-    
-    <div class="input-group" style="display: flex; gap:12px;">
-      <div style="flex:1.3;">
-        <label>Hạn Sử Dụng (HSD):</label>
-        <div id="selectDurationTrigger" class="glass-select-trigger">1 Ngày</div>
+      <div class="input-group" style="display: flex; gap:12px;">
+        <div style="flex:1.3;">
+          <label>Hạn Sử Dụng (HSD):</label>
+          <div id="selectDurationTrigger" class="glass-select-trigger">1 Ngày</div>
+        </div>
+        <div style="flex:0.7;">
+          <label>Số Máy:</label>
+          <input type="number" id="adminDevices" class="glass-input" value="1" min="1" style="text-align: center;">
+        </div>
       </div>
-      <div style="flex:0.7;">
-        <label>Số Máy:</label>
-        <input type="number" id="adminDevices" class="glass-input" value="1" min="1" style="text-align: center;">
+      <button class="btn-primary" id="btnCreateKey" style="margin-top: 4px; margin-bottom: 20px; background: linear-gradient(135deg, #0a84ff, #004094);">➕ TẠO KEY VIP</button>
+
+      <div class="input-group" style="margin-bottom: 8px;">
+        <input type="text" id="searchKeyInput" class="glass-input" placeholder="🔍 Tìm kiếm mã Key VIP..." style="padding: 12px; font-size: 0.9rem;">
       </div>
+      <div class="key-list" id="adminKeyList">Đang kết nối cơ sở dữ liệu...</div>
     </div>
-    
-    <button class="btn-primary" id="btnCreateKey" style="margin-top: 4px; margin-bottom: 20px; background: linear-gradient(135deg, #0a84ff, #004094);">➕ TẠO KEY HỆ THỐNG</button>
 
-    <div style="height: 1px; background: rgba(255,255,255,0.1); margin-bottom: 20px;"></div>
-
-    <div class="input-group">
-      <label style="color: #30d158;">📦 Bơm Key </label>
-      <div style="display: flex; gap:10px;">
-        <input type="number" id="adminPoolCount" class="glass-input" value="10" min="1" style="flex: 0.8; text-align: center;">
-        <button class="btn-primary" id="btnPumpPool" style="flex: 2; background: linear-gradient(135deg, #30d158, #1a7a32);">🚀 BƠM KEY VƯỢT LINK</button>
+    <!-- ===== TAB FREE ===== -->
+    <div class="tab-content" id="tabFree">
+      <!-- Thống kê -->
+      <div class="stats-bar" id="poolStatsBar">
+        <div class="stat-chip">
+          <div class="stat-num" id="statTotal" style="color:#fff;">—</div>
+          <div class="stat-label">Tổng key</div>
+        </div>
+        <div class="stat-chip">
+          <div class="stat-num" id="statUnused" style="color:#30d158;">—</div>
+          <div class="stat-label">Chưa dùng</div>
+        </div>
+        <div class="stat-chip">
+          <div class="stat-num" id="statUsed" style="color:#ff453a;">—</div>
+          <div class="stat-label">Đã dùng</div>
+        </div>
       </div>
-    </div>
 
-    <div class="input-group">
-      <label style="color: #ff9f0a;">🔄 Reset Key Pool (Xóa key đã dùng):</label>
-      <div style="display: flex; gap:10px;">
-        <button class="btn-primary" id="btnResetUsedKeys" style="background: linear-gradient(135deg, #ff9f0a, #cc7a00);">🗑️ XÓA KEY ĐÃ DÙNG</button>
-        <button class="btn-primary" id="btnResetAllPool" style="background: linear-gradient(135deg, #ff453a, #cc1a10);">⚠️ XÓA TOÀN BỘ POOL</button>
+      <!-- Bơm key -->
+      <div class="input-group">
+        <label style="color: #30d158;">🚀 Bơm Key Free vào kho vượt link:</label>
+        <div style="display: flex; gap:10px;">
+          <input type="number" id="adminPoolCount" class="glass-input" value="10" min="1" style="flex: 0.8; text-align: center;">
+          <button class="btn-primary" id="btnPumpPool" style="flex: 2; background: linear-gradient(135deg, #30d158, #1a7a32);">🚀 BƠM KEY</button>
+        </div>
       </div>
+
+      <!-- Nút reset -->
+      <div style="display: flex; gap: 8px; margin-bottom: 16px;">
+        <button class="btn-primary" id="btnResetUsedKeys" style="background: linear-gradient(135deg, #ff9f0a, #cc7a00); font-size:0.82rem; padding:11px 6px;">🗑️ XÓA ĐÃ DÙNG</button>
+        <button class="btn-primary" id="btnResetAllPool" style="background: linear-gradient(135deg, #ff453a, #cc1a10); font-size:0.82rem; padding:11px 6px;">⚠️ XÓA TẤT CẢ</button>
+      </div>
+
+      <!-- Tìm kiếm pool -->
+      <div class="input-group" style="margin-bottom: 8px;">
+        <input type="text" id="searchPoolInput" class="glass-input" placeholder="🔍 Tìm key FAROS-3H-..." style="padding: 12px; font-size: 0.9rem;">
+      </div>
+
+      <!-- Danh sách key free -->
+      <div class="pool-list" id="poolKeyList">Đang tải...</div>
     </div>
-
-    <div id="poolStatsBox" style="background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 12px 16px; margin-bottom: 16px; font-size: 0.85rem; color: var(--text-secondary); display:none;">
-      📊 Thống kê KEY_POOL: <span id="poolStatText" style="color:#fff; font-weight:700;">Đang tải...</span>
-    </div>
-
-    <div style="height: 1px; background: rgba(255,255,255,0.1); margin-bottom: 20px;"></div>
-
-    <div class="input-group" style="margin-bottom: 8px;">
-      <input type="text" id="searchKeyInput" class="glass-input" placeholder="🔍 Tìm kiếm mã Key..." style="padding: 12px; font-size: 0.9rem;">
-    </div>
-
-    <div class="key-list" id="adminKeyList">Đang kết nối cơ sở dữ liệu...</div>
   </div>
 
   <div id="farosToast" class="faros-toast"></div>
@@ -521,6 +571,84 @@
       });
     }
 
+    // =========================================================
+    // SWITCH TAB
+    // =========================================================
+    window.switchTab = function(tab) {
+      document.getElementById('tabBtnVip').classList.toggle('active', tab === 'vip');
+      document.getElementById('tabBtnFree').classList.toggle('active', tab === 'free');
+      document.getElementById('tabVip').classList.toggle('active', tab === 'vip');
+      document.getElementById('tabFree').classList.toggle('active', tab === 'free');
+      if (tab === 'free') loadPoolData();
+    };
+
+    // =========================================================
+    // POOL DATA - KEY FREE
+    // =========================================================
+    let allPoolData = [];
+
+    function loadPoolData() {
+      document.getElementById('poolKeyList').innerText = 'Đang tải...';
+      db.ref('KEY_POOL').once('value').then((snap) => {
+        allPoolData = [];
+        let total = 0, used = 0, unused = 0;
+        if (snap.exists()) {
+          snap.forEach((child) => {
+            const v = child.val();
+            allPoolData.push({ id: child.key, ...v });
+            total++;
+            if (v.used === true) used++; else unused++;
+          });
+          allPoolData.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+        }
+        document.getElementById('statTotal').innerText = total;
+        document.getElementById('statUnused').innerText = unused;
+        document.getElementById('statUsed').innerText = used;
+        renderPoolList(document.getElementById('searchPoolInput').value);
+      });
+    }
+
+    function renderPoolList(query = '') {
+      const list = document.getElementById('poolKeyList');
+      list.innerHTML = '';
+      let data = allPoolData;
+      if (query.trim()) {
+        const q = query.trim().toLowerCase();
+        data = allPoolData.filter(k => (k.key || '').toLowerCase().includes(q));
+      }
+      if (data.length === 0) {
+        list.innerHTML = '<div style="text-align:center;color:var(--text-secondary);padding:20px;font-size:0.85rem;">Kho trống hoặc không tìm thấy.</div>';
+        return;
+      }
+      data.forEach(k => {
+        const statusHtml = k.used
+          ? '<span class="badge-used">● Đã dùng</span>'
+          : '<span class="badge-unused">● Chưa dùng</span>';
+        const resetBtn = k.used
+          ? `<button class="btn-reset-one" onclick="resetOnePoolKey('${k.id}','${k.key}')">RESET</button>`
+          : '';
+        list.innerHTML += `
+          <div class="pool-item">
+            <div style="flex:1; min-width:0;">
+              <div class="pool-key-code">${k.key || k.id}</div>
+              <div class="pool-key-status">${statusHtml}</div>
+            </div>
+            <div class="action-btns">
+              <button class="btn-copy" onclick="copyKey('${k.key || k.id}')">COPY</button>
+              ${resetBtn}
+              <button class="btn-delete" onclick="deletePoolKey('${k.id}')">XÓA</button>
+            </div>
+          </div>`;
+      });
+    }
+
+    document.getElementById('searchPoolInput').addEventListener('input', (e) => {
+      renderPoolList(e.target.value);
+    });
+
+    // =========================================================
+    // initAdminActions
+    // =========================================================
     function initAdminActions() {
       const trigger = document.getElementById('selectDurationTrigger');
       const selectModal = document.getElementById('farosSelectModal');
@@ -528,18 +656,14 @@
       const optionButtons = document.querySelectorAll('.btn-option');
       const searchInput = document.getElementById('searchKeyInput');
 
-      searchInput.addEventListener('input', (e) => {
-          updateKeyListUI(e.target.value);
-      });
-
+      searchInput.addEventListener('input', (e) => { updateKeyListUI(e.target.value); });
       trigger.addEventListener('click', () => { selectModal.classList.add('active'); });
       closeSelectModal.addEventListener('click', () => { selectModal.classList.remove('active'); });
 
       optionButtons.forEach(btn => {
         btn.addEventListener('click', (e) => {
           const val = e.target.getAttribute('data-value');
-          selectModal.classList.remove('active'); 
-
+          selectModal.classList.remove('active');
           if (val === 'custom') {
             showFarosInputModal((res) => {
               let parsed = parseInt(res.value);
@@ -547,12 +671,8 @@
                 selectedDuration = parsed + res.unit;
                 let unitText = res.unit === 'MIN' ? 'Phút' : (res.unit === 'H' ? 'Giờ' : 'Ngày');
                 trigger.innerText = `Tùy chỉnh (${parsed} ${unitText})`;
-              } else {
-                showFarosToast('⚠️ Lỗi: Giá trị nhập không hợp lệ!');
-              }
-            }, () => {
-              // Hủy bỏ
-            });
+              } else { showFarosToast('⚠️ Lỗi: Giá trị nhập không hợp lệ!'); }
+            }, () => {});
           } else {
             selectedDuration = val;
             trigger.innerText = e.target.innerText;
@@ -567,128 +687,100 @@
       document.getElementById('btnCreateKey').addEventListener('click', () => {
         let val = document.getElementById('adminCustomKey').value.trim();
         const limit = parseInt(document.getElementById('adminDevices').value) || 1;
-
-        if(!val) {
-          val = getKeyPrefix(selectedDuration) + makeRandomString(5);
-        }
-
-        let nowTimestamp = Date.now();
-        
-        db.ref('DATABASE_FAROS_TURBOHEADAPPV1/' + val).set({ 
-          code: val, 
-          limit: limit, 
-          durationDays: selectedDuration, 
-          expire: 0,               
-          devices: {},
-          createdAt: nowTimestamp 
+        if (!val) val = getKeyPrefix(selectedDuration) + makeRandomString(5);
+        db.ref('DATABASE_FAROS_TURBOHEADAPPV1/' + val).set({
+          code: val, limit: limit, durationDays: selectedDuration,
+          expire: 0, devices: {}, createdAt: Date.now()
         }).then(() => {
-          showFarosToast("✅ Tạo Key hệ thống thành công!");
+          showFarosToast('✅ Tạo Key VIP thành công!');
           document.getElementById('adminCustomKey').value = '';
-        }).catch((error) => {
-          showFarosToast('❌ Lỗi khởi tạo key: ' + error.message);
-        });
+        }).catch((error) => { showFarosToast('❌ Lỗi: ' + error.message); });
       });
 
-      // =========================================================
-      // BƠM KEY VÀO KEY_POOL
-      // =========================================================
-      function loadPoolStats() {
-        const box = document.getElementById('poolStatsBox');
-        const txt = document.getElementById('poolStatText');
-        box.style.display = 'block';
-        txt.innerText = 'Đang tải...';
-        db.ref('KEY_POOL').once('value').then((snap) => {
-          if (!snap.exists()) {
-            txt.innerText = '0 key tổng | 0 chưa dùng | 0 đã dùng';
-            return;
-          }
-          let total = 0, used = 0, unused = 0;
-          snap.forEach((child) => {
-            total++;
-            if (child.val().used === true) used++;
-            else unused++;
-          });
-          txt.innerText = `${total} key tổng · 🟢 ${unused} chưa dùng · 🔴 ${used} đã dùng`;
-        });
-      }
-
-      loadPoolStats();
-
+      // BƠM KEY
       document.getElementById('btnPumpPool').addEventListener('click', () => {
         const count = parseInt(document.getElementById('adminPoolCount').value) || 10;
         const btn = document.getElementById('btnPumpPool');
         btn.disabled = true;
         btn.innerText = `ĐANG BƠM ${count} KEY...`;
-
         let promises = [];
         for (let i = 0; i < count; i++) {
-          const newKeyCode = 'FAROS-3H-' + makeRandomString(6);
           promises.push(db.ref('KEY_POOL').push({
-            key: newKeyCode,
-            used: false,
-            createdAt: Date.now()
+            key: 'FAROS-3H-' + makeRandomString(6),
+            used: false, createdAt: Date.now()
           }));
         }
-
         Promise.all(promises).then(() => {
-          showFarosToast(`✅ Đã bơm ${count} key vào kho vượt link!`);
-          btn.innerText = '🚀 BƠM KEY VƯỢT LINK';
+          showFarosToast(`✅ Đã bơm ${count} key free!`);
+          btn.innerText = '🚀 BƠM KEY';
           btn.disabled = false;
-          loadPoolStats();
+          loadPoolData();
         }).catch((err) => {
-          showFarosToast('❌ Lỗi bơm key: ' + err.message);
-          btn.innerText = '🚀 BƠM KEY VƯỢT LINK';
+          showFarosToast('❌ Lỗi: ' + err.message);
+          btn.innerText = '🚀 BƠM KEY';
           btn.disabled = false;
         });
       });
 
-      // =========================================================
-      // RESET KEY ĐÃ DÙNG
-      // =========================================================
+      // XÓA KEY ĐÃ DÙNG
       document.getElementById('btnResetUsedKeys').addEventListener('click', () => {
-        showFarosConfirm('Xóa toàn bộ key ĐÃ DÙNG trong KEY_POOL? Key chưa dùng sẽ giữ nguyên.', () => {
+        showFarosConfirm('Xóa toàn bộ key ĐÃ DÙNG? Key chưa dùng sẽ giữ nguyên.', () => {
           db.ref('KEY_POOL').orderByChild('used').equalTo(true).once('value').then((snap) => {
-            if (!snap.exists()) {
-              showFarosToast('ℹ️ Không có key đã dùng nào!');
-              return;
-            }
+            if (!snap.exists()) { showFarosToast('ℹ️ Không có key đã dùng!'); return; }
             let removes = [];
             snap.forEach((child) => { removes.push(child.ref.remove()); });
             Promise.all(removes).then(() => {
               showFarosToast(`✅ Đã xóa ${removes.length} key đã dùng!`);
-              loadPoolStats();
+              loadPoolData();
             });
           });
         });
       });
 
-      // =========================================================
-      // XÓA TOÀN BỘ KEY_POOL
-      // =========================================================
+      // XÓA TOÀN BỘ POOL
       document.getElementById('btnResetAllPool').addEventListener('click', () => {
-        showFarosConfirm('⚠️ XÓA TOÀN BỘ KEY_POOL? Hành động này không thể hoàn tác!', () => {
+        showFarosConfirm('⚠️ XÓA TOÀN BỘ KEY_POOL? Không thể hoàn tác!', () => {
           db.ref('KEY_POOL').remove().then(() => {
-            showFarosToast('✅ Đã xóa toàn bộ KEY_POOL!');
-            loadPoolStats();
-          }).catch((err) => {
-            showFarosToast('❌ Lỗi: ' + err.message);
-          });
+            showFarosToast('✅ Đã xóa toàn bộ kho key free!');
+            loadPoolData();
+          }).catch((err) => { showFarosToast('❌ Lỗi: ' + err.message); });
         });
       });
     }
 
     window.copyKey = (code) => {
-      navigator.clipboard.writeText(code).then(() => { showFarosToast('📋 Đã sao chép key thành công!'); })
-      .catch(() => { const t = document.createElement('textarea'); t.value = code; document.body.appendChild(t); t.select(); document.execCommand('copy'); document.body.removeChild(t); showFarosToast('📋 Đã sao chép key thành công!'); });
+      navigator.clipboard.writeText(code)
+        .then(() => { showFarosToast('📋 Đã sao chép key!'); })
+        .catch(() => { const t = document.createElement('textarea'); t.value = code; document.body.appendChild(t); t.select(); document.execCommand('copy'); document.body.removeChild(t); showFarosToast('📋 Đã sao chép key!'); });
     };
 
-    window.deleteKey = (code) => { 
-        if(!accessGranted || !db) return;
-        showFarosConfirm(`Bạn thực sự muốn xóa bỏ hoàn toàn key này khỏi máy chủ?`, () => {
-            db.ref('DATABASE_FAROS_TURBOHEADAPPV1/' + code).remove().then(() => {
-                showFarosToast('🗑️ Thu hồi Key thành công!');
-            });
+    window.deleteKey = (code) => {
+      if (!accessGranted || !db) return;
+      showFarosConfirm('Xóa key VIP này khỏi hệ thống?', () => {
+        db.ref('DATABASE_FAROS_TURBOHEADAPPV1/' + code).remove()
+          .then(() => { showFarosToast('🗑️ Thu hồi Key VIP thành công!'); });
+      });
+    };
+
+    window.deletePoolKey = (id) => {
+      if (!accessGranted || !db) return;
+      showFarosConfirm('Xóa key FREE này khỏi kho?', () => {
+        db.ref('KEY_POOL/' + id).remove().then(() => {
+          showFarosToast('🗑️ Đã xóa key free!');
+          loadPoolData();
         });
+      });
+    };
+
+    window.resetOnePoolKey = (id, keyCode) => {
+      if (!accessGranted || !db) return;
+      showFarosConfirm(`Reset key "${keyCode}" về trạng thái chưa dùng?`, () => {
+        db.ref('KEY_POOL/' + id).update({ used: false, takenBy: null, takenAt: null })
+          .then(() => {
+            showFarosToast('✅ Đã reset key về chưa dùng!');
+            loadPoolData();
+          });
+      });
     };
   </script>
 </body>
